@@ -1,7 +1,7 @@
 import os, time, logging
 from flask import session as flsk_s, request, redirect, url_for, render_template
 
-from synlogin import MSLogin, GLogin
+from .synlogin import MSLogin, GLogin
 
 # app.add_url_rule('/auth', 'authorized', view_func=auth.authorized, methods=['GET'])
 def authorized():

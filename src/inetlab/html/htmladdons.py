@@ -1,4 +1,4 @@
-from htmlbuilder import *
+from .htmlbuilder import *
 
 def BUTTON ( indent, name, value, env, **pars ):
     style = False

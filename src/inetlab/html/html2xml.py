@@ -112,8 +112,7 @@ print(re.sub ( "(\n\s*)+\n", "\n", xdom.toprettyxml("  ").encode ( "utf-8" ) ))
 import re, html.parser, logging
 from io import StringIO
 
-# ign libs - generic
-import htmlbuilder
+from . import htmlbuilder
 
 rescript = re.compile(r"<script\s*(.*?)>\s*(.*?)\s*</script>", re.I | re.S)
 recontent = re.compile(r'^<!--\n.+//-->$', re.S)

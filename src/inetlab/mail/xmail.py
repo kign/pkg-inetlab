@@ -62,7 +62,7 @@ def send_email(subject, html,
 
         if send_with_gmail_api :
             from base64 import urlsafe_b64encode
-            from gmail_api import login
+            from .gmail_api import login
 
             service = login(['send'])
 

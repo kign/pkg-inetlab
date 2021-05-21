@@ -1,5 +1,5 @@
-from mylangutils import *
-from htmlbuilder import *
+from ..utils.mylangutils import *
+from .htmlbuilder import *
 
 def InputString (indent, name, prompt=None, init="", **attrs) :
     if not prompt : prompt = ""

@@ -57,7 +57,12 @@ def login(permissions) :
         with open(fclicoen, 'rb') as fh :
             enc = fh.read()
 
-        passwd = getpass("Enter password for client config > ")
+        try :
+            passwd = getpass("Enter password for client config (Ctrl-C to quit) > ")
+        except KeyboardInterrupt as err:
+            print("\nCtrl-C, quiting")
+            exit(0)
+
         try :
             clico = json.loads(ARC4.new(passwd).decrypt(enc).decode('utf-8'))
         except Exception as err:
