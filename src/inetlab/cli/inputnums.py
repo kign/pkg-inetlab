@@ -31,7 +31,7 @@ def input_numbers(prompt, n, flat: bool, extend=None) :
             p = [(1,n)]
             break
 
-        elif resp in ['n', 'None'] :
+        elif resp in ['n', 'none'] :
             p = []
             break
 
