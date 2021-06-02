@@ -1,4 +1,4 @@
-import os, re, logging, inspect, yaml
+import os, re, logging, inspect
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.pool import NullPool
@@ -39,20 +39,11 @@ class SQLDBConnector :
 
     @classmethod
     def set_env_from_yaml(cls, app_yaml=None):
+        from ..gae import dbgyamlenv
         if app_yaml is None:
             app_yaml = cls.app_yaml
 
-        try :
-            app_cfg = yaml.load(open(app_yaml), Loader=yaml.FullLoader)
-        except AttributeError as err :
-            if 'FullLoader' in str(err) :
-                app_cfg = yaml.load(open(app_yaml))
-            else :
-                raise err
-
-        for env_name, env_value in app_cfg['env_variables'].items() :
-            logging.info("%s = %s", env_name, '*' * len(env_value) if 'password' in env_name else env_value)
-            os.environ[env_name] = env_value
+        dbgyamlenv.set_env_from_yaml(app_yaml)
 
     def set_dry_run(self, dry_run=True) :
         old_dry_run = self._dry_run
@@ -177,7 +168,7 @@ class SQLDBConnector :
             else :
                 return val
 
-        from genformatter import GenericFormatter
+        from ..cli.genformatter import GenericFormatter
         out = GenericFormatter("aligned,width=30")
         irow = 0
         for row in self._conn :
