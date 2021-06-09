@@ -4,6 +4,14 @@ import msal
 from google.oauth2 import id_token
 from google.auth.transport import requests
 
+def setup_partners(google_client_id = None,
+                   microsoft_client_id = None,
+                   microsoft_client_secret = None) :
+
+    GLogin.CLIENT_ID = google_client_id
+    MSLogin.CLIENT_ID = microsoft_client_id
+    MSLogin.CLIENT_SECRET = microsoft_client_secret
+
 class GLogin :
     CLIENT_ID = "<CLIENT_ID>"
 

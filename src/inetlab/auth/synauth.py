@@ -3,14 +3,22 @@ from flask import session as flsk_s, request, redirect, url_for, render_template
 
 from .synlogin import MSLogin, GLogin
 
+EP_USER = "user"
+EP_HOME = "home"
+
+def setup_endpoints(home, user) :
+    global EP_USER, EP_HOME
+    EP_USER = user
+    EP_HOME = home
+
 # app.add_url_rule('/auth', 'authorized', view_func=auth.authorized, methods=['GET'])
 def authorized():
     """
     This is for Microsoft authentication, for now
     """
 
-    MSLogin.CLIENT_ID = os.environ.get('MS_CLIENT_ID')
-    MSLogin.CLIENT_SECRET = os.environ.get('MS_CLIENT_SECRET')
+    # MSLogin.CLIENT_ID = os.environ.get('MS_CLIENT_ID')
+    # MSLogin.CLIENT_SECRET = os.environ.get('MS_CLIENT_SECRET')
 
     # This call could return one of:
     # - dictionary with 'error' key (authentication error)
@@ -23,9 +31,9 @@ def authorized():
         res['error']
     except TypeError :
         if res == 0 :
-            return redirect(url_for("home"))
+            return redirect(url_for(EP_HOME))
         else :
-            return redirect(url_for("user"))
+            return redirect(url_for(EP_USER))
 
     return render_template("lib_auth_error.html", result=res)
 
@@ -58,6 +66,6 @@ def logout():
     if provider == 'microsoft' :
         return redirect(  # Also logout from your tenant's web session
             MSLogin.AUTHORITY + "/oauth2/v2.0/logout" +
-            "?post_logout_redirect_uri=" + url_for("home", _external=True))
+            "?post_logout_redirect_uri=" + url_for(EP_HOME, _external=True))
     else :
-        return redirect(url_for("home"))
+        return redirect(url_for(EP_HOME))
