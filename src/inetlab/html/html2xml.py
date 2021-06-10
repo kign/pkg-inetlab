@@ -252,7 +252,7 @@ class Parser(html.parser.HTMLParser) :
         if not res or not res[0]: return ""
 
         if self.dbgxmlout:
-            self.dbgxmlout.write("".join(res).encode(self.dbg_enc_out))
+            self.dbgxmlout.write("".join(res))
             if self.eof and tres < req:
                 self.dbgxmlout.write("""
 <!-- Local """ + """Variables: -->
@@ -447,7 +447,7 @@ class Parser(html.parser.HTMLParser) :
     @staticmethod
     def normalize_scripts(html_in, method) :
         """This is an auxiliary utility to "normalize" <script>'s in HTML text
-        It is needed becase scripts with embedded HTML could break Python HTML parses
+        It is needed because scripts with embedded HTML could break Python HTML parser.
         Obviously, this solution is very crude and may yield bad results, but
         in all normal circumstances it works and "properly" escapes scripts so that
         page becomes "valid" (from the point of view of Python parser, of course)
@@ -460,7 +460,7 @@ class Parser(html.parser.HTMLParser) :
         Current solution however allows to *preserve* scripts in case they are needed.
 
         2. Since HTML parser sees "normalized" scripts as HTML comments, in order to
-           preserve them is is necessary to set self.skip_comments to False
+           preserve them it is necessary to set self.skip_comments to False
            (True by default)
 
         3. In order to use this utility, one must retrieve *complete* input stream,
