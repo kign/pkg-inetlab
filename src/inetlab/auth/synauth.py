@@ -45,7 +45,7 @@ def token():
     """
 
     try:
-        GLogin.CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
+        # GLogin.CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
         res = GLogin.token(flsk_s, request.form['idtoken'])
         logging.info("Returned %s from token()", res)
         return res
