@@ -1,4 +1,4 @@
-import sys, logging, os
+import sys, logging
 from ..html.htmlbuilder import DIV
 
 def send_email(subject, html,
@@ -113,31 +113,65 @@ def make_list(emails) :
     from email.header import Header
     return ", ".join(("{} <{}>".format(x[0] if x[0].isascii() else Header(x[0], 'utf-8').encode(), x[1]) if x[0] else x[1]) for x in emails)
 
-if __name__ == "__main__" :
-    import random
-    from colorterm import add_coloring_to_emit_ansi
+
+def test() :
+    import re, random
+    from argparse import ArgumentParser
+    from ..cli.colorterm import add_coloring_to_emit_ansi
+
+    parser = ArgumentParser(description="Testing email send")
+    parser.add_argument('--gmail-api', action='store_true', help="Send with GMail API (browser authorisation required)")
+    parser.add_argument('--smtp', metavar='[USER[:PASSWD]@]HOST[:PORT]', help="Send with SMTP")
+    parser.add_argument('send_from', metavar='SEND-FROM')
+    parser.add_argument('send_to', metavar='SEND-TO')
+    parser.add_argument('file', metavar='FILE')
+
+    args = parser.parse_args ()
 
     logging.basicConfig(format="%(asctime)s.%(msecs)03d %(filename)s:%(lineno)d %(message)s",
                         level=logging.DEBUG, datefmt='%H:%M:%S')
     logging.StreamHandler.emit = add_coloring_to_emit_ansi(logging.StreamHandler.emit)
 
-    if len(sys.argv) != 4 :
-        print(f"Usage: {sys.executable} {sys.argv[0]} <SEND-FROM> <SEND-TO> <FILE>\n"
-              ">This will send samle email to designated address and attach the file<")
+    if args.gmail_api and args.smtp :
+        logging.error("You can only specify one of --gmail-api or --smtp, not both")
         exit(1)
 
-    addr_from, addr_to, fpath = sys.argv[1:]
-    send_email(subject = f"Проверочный емейл using GMail API, random ID: {random.randrange(10**6, 10**7)}",
-               html = f"""\
+    if not args.gmail_api and not args.smtp :
+        args.smtp = "localhost"
+
+    if args.smtp :
+        m = re.compile(r'^(?:(?P<user>[^:]+)(?::(?P<pass>.+))?@)?(?P<host>[a-z0-9.-]+)(?::(?P<port>\d+))?$', re.I).match(args.smtp)
+
+        if not m :
+            logging.error("Cannot parse SMTP string")
+            exit(1)
+
+        print ("SMTP config" )
+        for x in ['user', 'pass', 'host', 'port'] :
+            print("   ", x, "=", m.group(x))
+        print("    SSL  = <default>")
+
+    pars = {'subject' :f"Проверочный емейл using , random ID: {random.randrange(10 ** 6, 10 ** 7)}",
+            'html' : f"""\
 Hi!<br />
 This is a test of <code>users.messages.send</code>.<br />
-Below we embed image <b>{fpath}</b>, check it out:<br />
+Below we embed image <b>{args.file}</b>, check it out:<br />
 <img src="cid:sample_file" /> <br />
 Hope it worked!
 """,
-               send_from = addr_from,
-               send_to = [("Вася Закусочник", addr_to)],
-               images = {'sample_file': open(fpath,'rb').read()},
-               send_with_gmail_api = True)
+            'send_from' : args.send_from,
+            'send_to' : [("Вася Закусочник", args.send_to)],
+            'images' : {'sample_file': open(args.file, 'rb').read()}
+            }
+
+    if args.gmail_api :
+        pars['send_with_gmail_api'] = True
+    else :
+        pars['smtp_port'] = m.group('port')
+        pars['smtp_host'] = m.group('host')
+        pars['smtp_user'] = m.group('user')
+        pars['smtp_pass'] = m.group('pass')
+
+    send_email(** pars)
 
 
