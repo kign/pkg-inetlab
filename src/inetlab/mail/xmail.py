@@ -1,5 +1,53 @@
-import sys, logging
+import re, sys, logging
 from ..html.htmlbuilder import DIV
+
+channel_string = '[USER[:PASSWD]@]HOST[:PORT]|google|file=FILE'
+
+def send(subject, html, channel,
+         send_from=None,
+         send_to=None,
+         send_cc=None,
+         images=None,
+         dry_run=None):
+    """
+    :param subject:     Email subject
+    :param html:        Email content
+    :param channel:     Email delivery channel, or save to file option
+    :param send_from:   Sender's email
+    :param send_to:     Recipients' email(s). Could be array (see below) or string. If string, module pyparsing required
+    :param send_cc:     CC email(s), comment above for send_to applies
+    :param images:      Lost of embedded images
+    :param dry_run:     Dry run (nothing will be sent if True)
+    :return: *Nothing*
+    """
+
+    kwargs = {'send_from' : send_from}
+    if channel == "google" :
+        kwargs['send_with_gmail_api'] = True
+    elif channel.startswith('file=') :
+        kwargs['save_message_to_file'] = channel[5:]
+        kwargs['send_from'] = None  # inhibiting attempt to send
+    else :
+        m = re.compile(r'^(?:(?P<user>[^:]+)(?::(?P<pass>.+))?@)?(?P<host>[a-z0-9.-]+)(?::(?P<port>\d+))?$', re.I).match(channel)
+        if not m :
+            raise ValueError(f"Cannot parse {channel}")
+
+        kwargs['smtp_port'] = m.group('port')
+        kwargs['smtp_host'] = m.group('host')
+        kwargs['smtp_user'] = m.group('user')
+        kwargs['smtp_pass'] = m.group('pass')
+
+    def address(s) :
+        if isinstance(s, str) :
+            return parse_address_string(s)
+        else :
+            return s
+
+    send_email(subject, html,
+               send_to=address(send_to), send_cc=address(send_cc),
+               images=images, dry_run=dry_run,
+               **kwargs)
+
 
 def send_email(subject, html,
                images=None,
@@ -113,18 +161,32 @@ def make_list(emails) :
     from email.header import Header
     return ", ".join(("{} <{}>".format(x[0] if x[0].isascii() else Header(x[0], 'utf-8').encode(), x[1]) if x[0] else x[1]) for x in emails)
 
+def parse_address_string(s) :
+    import pyparsing as pp
+
+    host = pp.Combine(pp.delimitedList(pp.Word(pp.alphanums), '.', combine=True)).setParseAction(pp.downcaseTokens)
+    email = pp.Combine(pp.Word(pp.alphanums) + "@" + host)
+
+    name = pp.CharsNotIn(',<"') |  pp.dblQuotedString.setParseAction(pp.removeQuotes)
+    recipient = pp.Group(name + "<" + email + ">" | email)
+    rcp_list = pp.delimitedList(recipient, ',') + pp.StringEnd()
+
+    try :
+        return [(None,x[0]) if len(x) == 1 else (x[0], x[2]) for x in rcp_list.parseString(s)]
+    except pp.ParseException as err :
+        logging.error("Cannot parse %s: %s", s, err)
+        return None
 
 def test() :
-    import re, random
+    import random
     from argparse import ArgumentParser
     from ..cli.colorterm import add_coloring_to_emit_ansi
 
-    parser = ArgumentParser(description="Testing email send")
-    parser.add_argument('--gmail-api', action='store_true', help="Send with GMail API (browser authorisation required)")
-    parser.add_argument('--smtp', metavar='[USER[:PASSWD]@]HOST[:PORT]', help="Send with SMTP")
+    parser = ArgumentParser(description="Testing email send (with embedded image)")
+    parser.add_argument('channel', metavar=channel_string, help="Sending options")
     parser.add_argument('send_from', metavar='SEND-FROM')
     parser.add_argument('send_to', metavar='SEND-TO')
-    parser.add_argument('file', metavar='FILE')
+    parser.add_argument('file', metavar='IMAGE')
 
     args = parser.parse_args ()
 
@@ -132,46 +194,15 @@ def test() :
                         level=logging.DEBUG, datefmt='%H:%M:%S')
     logging.StreamHandler.emit = add_coloring_to_emit_ansi(logging.StreamHandler.emit)
 
-    if args.gmail_api and args.smtp :
-        logging.error("You can only specify one of --gmail-api or --smtp, not both")
-        exit(1)
-
-    if not args.gmail_api and not args.smtp :
-        args.smtp = "localhost"
-
-    if args.smtp :
-        m = re.compile(r'^(?:(?P<user>[^:]+)(?::(?P<pass>.+))?@)?(?P<host>[a-z0-9.-]+)(?::(?P<port>\d+))?$', re.I).match(args.smtp)
-
-        if not m :
-            logging.error("Cannot parse SMTP string")
-            exit(1)
-
-        print ("SMTP config" )
-        for x in ['user', 'pass', 'host', 'port'] :
-            print("   ", x, "=", m.group(x))
-        print("    SSL  = <default>")
-
-    pars = {'subject' :f"Проверочный емейл using , random ID: {random.randrange(10 ** 6, 10 ** 7)}",
-            'html' : f"""\
+    send(f"Проверочный емейл using , random ID: {random.randrange(10 ** 6, 10 ** 7)}",
+            f"""\
 Hi!<br />
 This is a test of <code>users.messages.send</code>.<br />
 Below we embed image <b>{args.file}</b>, check it out:<br />
 <img src="cid:sample_file" /> <br />
 Hope it worked!
 """,
-            'send_from' : args.send_from,
-            'send_to' : [("Вася Закусочник", args.send_to)],
-            'images' : {'sample_file': open(args.file, 'rb').read()}
-            }
-
-    if args.gmail_api :
-        pars['send_with_gmail_api'] = True
-    else :
-        pars['smtp_port'] = m.group('port')
-        pars['smtp_host'] = m.group('host')
-        pars['smtp_user'] = m.group('user')
-        pars['smtp_pass'] = m.group('pass')
-
-    send_email(** pars)
-
-
+         args.channel,
+        send_from=args.send_from,
+        send_to=[("Вася Закусочник", args.send_to)],
+        images={'sample_file': open(args.file, 'rb').read()})
