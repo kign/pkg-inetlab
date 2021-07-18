@@ -15,7 +15,7 @@ class SQLDBConnector :
         else :
             # This is for local dev testing
             # raise RuntimeError("NO!!!!!!!!!!!!")
-            self._pool, self.session = self.make_pool(engine_url, engine_url_dbg, echo=echo, poolclass=NullPool)
+            self._pool, self.session = self.make_pool(engine_url, engine_url_dbg, False, echo=echo, poolclass=NullPool)
 
         self._conn = None
         self._proxy = None
@@ -23,11 +23,12 @@ class SQLDBConnector :
         self._dbg_connection_url = None
 
     @staticmethod
-    def make_pool(engine_url, engine_url_dbg, **pars) :
-        print("Allocating pool", engine_url_dbg, "with parameters", pars)
-
-        # For some weird reason logging doesn't work here and breaks logging down the road
-        # logging.info("Allocating pool at %s with options", dbg_url, pars)
+    def make_pool(engine_url, engine_url_dbg, from_flask, **pars) :
+        # For some weird reason when commenced from flask app logging doesn't work here and breaks logging down the road
+        if from_flask :
+            print("Allocating pool", engine_url_dbg, "with parameters", pars)
+        else :
+            logging.info("Allocating pool at %s with options %s", engine_url_dbg, pars)
 
         pool = create_engine(engine_url, **pars)
         session_maker = scoped_session(sessionmaker(bind=pool))
