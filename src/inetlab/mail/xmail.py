@@ -8,6 +8,7 @@ def send(subject, html, channel,
          send_to=None,
          send_cc=None,
          images=None,
+         invoke_premailer=False,
          dry_run=None):
     """
     :param subject:     Email subject
@@ -17,6 +18,7 @@ def send(subject, html, channel,
     :param send_to:     Recipients' email(s). Could be array (see below) or string. If string, module pyparsing required
     :param send_cc:     CC email(s), comment above for send_to applies
     :param images:      Lost of embedded images
+    :param invoke_premailer: apply Python module premailer tp HTML
     :param dry_run:     Dry run (nothing will be sent if True)
     :return: *Nothing*
     """
@@ -45,7 +47,7 @@ def send(subject, html, channel,
 
     send_email(subject, html,
                send_to=address(send_to), send_cc=address(send_cc),
-               images=images, dry_run=dry_run,
+               images=images, dry_run=dry_run, invoke_premailer=invoke_premailer,
                **kwargs)
 
 
@@ -62,6 +64,7 @@ def send_email(subject, html,
                save_message_to_file=None,
                smtp_host="localhost",
                smtp_user=None,
+               invoke_premailer=False,
                smtp_pass=None) :
     """
     send_to is array [(name1, address1),(name2, address2),...,(nameN, addressN)]
@@ -70,6 +73,10 @@ def send_email(subject, html,
 
     if smtp_ssl is None :
         smtp_ssl = smtp_host != "localhost"
+
+    if invoke_premailer :
+        from premailer import transform
+        html = transform(html)
 
     if save_message_to_file :
         with open(save_message_to_file,"w") as fh :
