@@ -1,16 +1,24 @@
 # pkg-inetlab
 Python helper libraries for Web/GAE/Flask, HTML manipulation and command line tools
 
-This package accumulates many Python utilities I accumulated over the years and used in some of my projects. 
+This package combines many Python utilities I accumulated over the years and used in some of my projects. 
 Some are outdated or serve some narrow purpose, other not quite complete. Use at your own risk!
 
 Below if a brief description of the nodules included
+
+* [pkg-inetlab](#pkg-inetlab)
+   * [inetlab.auth](#inetlabauth)
+   * [inetlab.cli](#inetlabcli)
+      * [colorterm](#colorterm)
+      * [genformatter](#genformatter)
+      * [inputnums.py](#inputnumspy)
+   * [inetlab.html](#inetlabhtml)
 
 ## inetlab.auth
 
 Utilities to be used in a `flask` project to implement syndicated login (at this time, Microsoft and Google logins are supported).
 
-There is a working usage example [available here](https://github.com/kign/url-shortener). Briefly, use do this:
+There is a working usage example [available here](https://github.com/kign/url-shortener). Briefly, follow these steps:
 
 1. Setup environment:
 
