@@ -148,9 +148,6 @@ if __name__ == "__main__" :
         exit(0)
 
     if mode == "auto" :
-        from traceback import print_exception
-
-        sys.path.append(os.path.expanduser("~/git/inet-lab/shared/pylib3"))
         from genformatter import GenericFormatter
 
         TESTS = [
