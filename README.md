@@ -90,7 +90,7 @@ for x in range(1,10) :
 out.close ()
 ```
 
-### inputnums.py
+### inputnums
 
 `input_numbers` allows one to make multiple selection from number of given choices, allowing for intervals (possible overlapping) 
 and "except <...>" syntax.
@@ -111,9 +111,84 @@ def input_numbers(prompt, n, flat: bool, extend=None) :
     """
 ```
 
+## inetlab.mail.xmail
+
+General functionality for sending emails. Supports embedded images and sending via SMTP or GMail API.
+
+```python
+def send(subject, html, channel,
+         send_from=None,
+         send_to=None,
+         send_cc=None,
+         images=None,
+         invoke_premailer=False,
+         dry_run=None):
+    """
+    :param subject:     Email subject
+    :param html:        Email content
+    :param channel:     Email delivery channel, or save to file option (file=...)
+    :param send_from:   Sender's email
+    :param send_to:     Recipients' email(s). Could be array (see below) or string. If string, module pyparsing required
+    :param send_cc:     CC email(s), comment above for send_to applies
+    :param images:      Lost of embedded images
+    :param invoke_premailer: apply Python module premailer tp HTML
+    :param dry_run:     Dry run (nothing will be sent if True)
+    :return: *Nothing*
+    """
+```
+Usage example:
+
+```python
+from inetlab.mail.xmail import send
+import random
+
+send(f"Testing email using inetlab.mail, random ID: {random.randrange(10 ** 6, 10 ** 7)}",
+            f"""\
+Hi!<br />
+This is a test of <code>users.messages.send</code>.<br />
+Below we embed image <b>{sample_file}</b>, check it out:<br />
+<img src="cid:sample_file" /> <br />
+Hope it worked!
+""",
+        '<username>:<password>>@smtp.some.server.com:465',
+        send_from='my_email@example.com',
+        send_to='John Doe <john.doe@example.org>',
+        images={'sample_file': open(sample_file, 'rb').read()})
+```
+
+NOTES:
+
+ * We don't support attachments (not that it's difficult to add), only embedded images. 
+ * If you want to send emails from your GMail account, you have two options: (1) using SMTP which requires you to explicitly go to [this page](https://myaccount.google.com/lesssecureapps) allow access to "less secure" apps (and then it'll periodically revert to default, so once you see your SMTP authentication failing you'll need to do it again); or (2) use official GMail API, which requires you to register your "app" with Google's [GCloud](https://console.cloud.google.com/) and to authenticate your account in browser more or less every time you'll need to use it (thus preventing any background use).
+ * You can specify addressees as an array `[(name1, address1),(name2, address2),...,(nameN, addressN)]` (any `name` could be `None`), or as comma-separated string `name1 <address1>, name2 <address2>,...` (name could have commans if quoted). If using later option, we'll use [pyparsing](https://pypi.org/project/pyparsing/) to parse.
+
 ## inetlab.html
 
-Everything related to HTML :smiley:
+Mostly outdated utilities for parsing and generating HTML. 
+
+### html2xml
+
+My preferred tool for parsing badly formatted HTML pages by translating them to proper XML fixing 
+parsing issues as they occur. By no means universal or bullet-proof, but helps to quickly make a 
+customized parser for a specific site.
+
+### htmlbuilder
+
+In the old days, used this handy library to easily generate HTML tags in Python code.
+No longer useful.
+
+### htmladdons
+
+Similarly to `htmlbuilder`, generating more advanced HTML code. No longer useful.
+
+### inputlib
+
+Similarly to `htmlbuilder`, generating HTML forms. No longer useful.
+
+### jsescape
+
+Old utility for escaping strings in JavaScript code generated in Python. No longer useful.
+
 
 
 
