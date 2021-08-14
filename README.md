@@ -8,11 +8,20 @@ Below if a brief description of the nodules included
 
 * [pkg-inetlab](#pkg-inetlab)
    * [inetlab.auth](#inetlabauth)
+   * [inetlab.sql](#inetlabsql)
+   * [inetlab.gae](#inetlabgae)
+   * [inetlab.gae](#inetlabgae-1)
    * [inetlab.cli](#inetlabcli)
       * [colorterm](#colorterm)
       * [genformatter](#genformatter)
-      * [inputnums.py](#inputnumspy)
+      * [inputnums](#inputnums)
+   * [inetlab.mail.xmail](#inetlabmailxmail)
    * [inetlab.html](#inetlabhtml)
+      * [html2xml](#html2xml)
+      * [htmlbuilder](#htmlbuilder)
+      * [htmladdons](#htmladdons)
+      * [inputlib](#inputlib)
+      * [jsescape](#jsescape)
 
 ## inetlab.auth
 
@@ -58,6 +67,78 @@ render_template('home.html',
    redirect_succ=url_for('home'),
    google_client_id=synlogin.GLogin.CLIENT_ID)
 ```
+
+## inetlab.sql
+
+This provides a wrapper to run MySQL queries via [SQLAlchemy](https://www.sqlalchemy.org/) interface.
+
+```python
+from inetlab.sql.sqldbconn import SQLDBConnector
+
+db = SQLDBConnector(pool, engine_url, engine_url_dbg, echo=False)
+
+db.execute("select col_a, col_b from mytable")
+
+for col_a, col_b in conn:
+    print(col_a, col_b)
+```
+
+Why wouldn't one use a python MySQL wrapper directly? Actually, SQLAlchemy is a recommended way to use Google's
+[Cloud SQL](https://cloud.google.com/sql/docs), and it does seem to work best in my testing.
+
+## inetlab.gae
+
+This works with `inetlab.sql` to allocate connection in GAE + CloudSQL project.
+
+```python
+from inetlab.gae.gaedbconn import gae_engine_url
+from inetlab.sql.sqldbconn import SQLDBConnector
+
+# github.com/GoogleCloudPlatform/python-docs-samples/blob/master/cloud-sql/mysql/sqlalchemy/main.py
+pool_config = {
+    # [START cloud_sql_mysql_sqlalchemy_limit]
+    # Pool size is the maximum number of permanent connections to keep.
+    "pool_size": 5,
+    # Temporarily exceeds the set pool_size if no connections are available.
+    "max_overflow": 2,
+    # The total number of concurrent connections for your application will be
+    # a total of pool_size and max_overflow.
+    # [END cloud_sql_mysql_sqlalchemy_limit]
+    # [START cloud_sql_mysql_sqlalchemy_backoff]
+    # SQLAlchemy automatically uses delays between failed connection attempts,
+    # but provides no arguments for configuration.
+    # [END cloud_sql_mysql_sqlalchemy_backoff]
+    # [START cloud_sql_mysql_sqlalchemy_timeout]
+    # 'pool_timeout' is the maximum number of seconds to wait when retrieving a
+    # new connection from the pool. After the specified amount of time, an
+    # exception will be thrown.
+    "pool_timeout": 30,  # 30 seconds
+    # [END cloud_sql_mysql_sqlalchemy_timeout]
+    # [START cloud_sql_mysql_sqlalchemy_lifetime]
+    # 'pool_recycle' is the maximum number of seconds a connection can persist.
+    # Connections that live longer than the specified amount of time will be
+    # reestablished
+    "pool_recycle": 1800,  # 30 minutes
+    # [END cloud_sql_mysql_sqlalchemy_lifetime]
+}
+
+engine_url, dbg_engine_url = gae_engine_url('my_database')
+pool, sqla_session = SQLDBConnector.make_pool(engine_url, dbg_engine_url, True, **pool_config)
+
+db = SQLDBConnector (pool)
+db.set_dbg_connection_url(dbg_engine_url)
+
+# if need to use SQLAlchemy...
+myClass = sqla_session.query(MyClass).filter_by(id=id).one()
+
+# if need to use MySQL directly...
+db.execute("select col_a, col_b from mytable")
+```
+
+## inetlab.gae
+
+Simple helper functions to 
+
 
 ## inetlab.cli
 
@@ -130,7 +211,7 @@ def send(subject, html, channel,
     :param send_from:   Sender's email
     :param send_to:     Recipients' email(s). Could be array (see below) or string. If string, module pyparsing required
     :param send_cc:     CC email(s), comment above for send_to applies
-    :param images:      Lost of embedded images
+    :param images:      List of embedded images
     :param invoke_premailer: apply Python module premailer tp HTML
     :param dry_run:     Dry run (nothing will be sent if True)
     :return: *Nothing*
