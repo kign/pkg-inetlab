@@ -13,11 +13,11 @@ def send(subject, html, channel,
     """
     :param subject:     Email subject
     :param html:        Email content
-    :param channel:     Email delivery channel, or save to file option
+    :param channel:     Email delivery channel, or save to file option (file=...)
     :param send_from:   Sender's email
     :param send_to:     Recipients' email(s). Could be array (see below) or string. If string, module pyparsing required
     :param send_cc:     CC email(s), comment above for send_to applies
-    :param images:      Lost of embedded images
+    :param images:      List of embedded images
     :param invoke_premailer: apply Python module premailer tp HTML
     :param dry_run:     Dry run (nothing will be sent if True)
     :return: *Nothing*
