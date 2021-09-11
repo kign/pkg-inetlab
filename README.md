@@ -135,11 +135,6 @@ myClass = sqla_session.query(MyClass).filter_by(id=id).one()
 db.execute("select col_a, col_b from mytable")
 ```
 
-## inetlab.gae
-
-Simple helper functions to 
-
-
 ## inetlab.cli
 
 Some utilities commonly used in command line Python scripts
