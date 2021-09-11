@@ -31,9 +31,9 @@ class SQLDBConnector :
             logging.info("Allocating pool at %s with options %s", engine_url_dbg, pars)
 
         pool = create_engine(engine_url, **pars)
-        session_maker = scoped_session(sessionmaker(bind=pool))
+        sqla_session = scoped_session(sessionmaker(bind=pool))
 
-        return pool, session_maker
+        return pool, sqla_session
 
     def get_engine(self) :
         return self._pool
