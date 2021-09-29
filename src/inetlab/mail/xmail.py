@@ -1,3 +1,4 @@
+import os.path
 import re, sys, logging
 from ..html.htmlbuilder import DIV
 
@@ -17,10 +18,15 @@ def send(subject, html, channel,
     :param send_from:   Sender's email
     :param send_to:     Recipients' email(s). Could be array (see below) or string. If string, module pyparsing required
     :param send_cc:     CC email(s), comment above for send_to applies
-    :param images:      List of embedded images
+    :param images:      List of embedded/attached images or other attached files
     :param invoke_premailer: apply Python module premailer tp HTML
     :param dry_run:     Dry run (nothing will be sent if True)
     :return: *Nothing*
+
+    `images` could be either of :
+       * List of files to attach (either images or not)
+       * Dictionary ID => <binary content>; this could be embedded image if (A) <binary content> is in fact an image,
+             AND (B) `html` content has string "cid:{ID}" embedded somewhere
     """
 
     kwargs = {'send_from' : send_from}
@@ -87,6 +93,7 @@ def send_email(subject, html,
         from email.mime.multipart import MIMEMultipart
         from email.mime.text import MIMEText
         from email.mime.image import MIMEImage
+        from email.mime.application import MIMEApplication
 
         mroot = MIMEMultipart('related')
         mroot['subject'] = subject
@@ -100,10 +107,30 @@ def send_email(subject, html,
         mroot.attach(MIMEText(html,'html', 'utf-8'))
 
         if images :
-            for iname,img in images.items() :
-                msgImage = MIMEImage(img)
-                msgImage.add_header('Content-ID', '<%s>' % iname)
+            def attach_file(iname, img, embed) :
+                try:
+                    msgImage = MIMEImage(img)
+                    if embed and f'"cid:{iname}"' in html or f"'cid:{iname}'" in html:
+                        msgImage.add_header('Content-ID', '<%s>' % iname)
+                    else:
+                        if '.' not in iname:
+                            iname += '.' + msgImage.get_content_subtype()
+                        msgImage.add_header('Content-Disposition', f'attachment; filename="{iname}"')
+                except TypeError:
+                    msgImage = MIMEApplication(img)
+                    msgImage.add_header('Content-Disposition', f'attachment; filename="{iname}"')
+
                 mroot.attach(msgImage)
+
+            if isinstance(images,list) :
+                for img_elm in images :
+                    with open(img_elm, 'rb') as fh :
+                        iname = os.path.basename(img_elm)
+                        img = fh.read ()
+                    attach_file(iname, img, False)
+            else :
+                for iname, img in images.items() :
+                    attach_file(iname, img, True)
 
         msg_content = mroot.as_string()
 

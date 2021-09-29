@@ -206,10 +206,15 @@ def send(subject, html, channel,
     :param send_from:   Sender's email
     :param send_to:     Recipients' email(s). Could be array (see below) or string. If string, module pyparsing required
     :param send_cc:     CC email(s), comment above for send_to applies
-    :param images:      List of embedded images
+    :param images:      List of embedded/attached images or other attached files
     :param invoke_premailer: apply Python module premailer tp HTML
     :param dry_run:     Dry run (nothing will be sent if True)
     :return: *Nothing*
+    
+    `images` could be either of :
+       * List of files to attach (either images or not)
+       * Dictionary ID => <binary content>; this could be embedded image if (A) <binary content> is in fact an image, 
+             AND (B) `html` content has string "cid:{ID}" embedded somewhere
     """
 ```
 Usage example:
@@ -234,7 +239,6 @@ Hope it worked!
 
 NOTES:
 
- * We don't support attachments (not that it's difficult to add), only embedded images. 
  * If you want to send emails from your GMail account, you have two options: (1) using SMTP which requires you to explicitly go to [this page](https://myaccount.google.com/lesssecureapps) allow access to "less secure" apps (and then it'll periodically revert to default, so once you see your SMTP authentication failing you'll need to do it again); or (2) use official GMail API, which requires you to register your "app" with Google's [GCloud](https://console.cloud.google.com/) and to authenticate your account in browser more or less every time you'll need to use it (thus preventing any background use).
  * You can specify addressees as an array `[(name1, address1),(name2, address2),...,(nameN, addressN)]` (any `name` could be `None`), or as comma-separated string `name1 <address1>, name2 <address2>,...` (name could have commans if quoted). If using later option, we'll use [pyparsing](https://pypi.org/project/pyparsing/) to parse.
 
