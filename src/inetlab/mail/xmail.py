@@ -195,20 +195,27 @@ def make_list(emails) :
     from email.header import Header
     return ", ".join(("{} <{}>".format(x[0] if x[0].isascii() else Header(x[0], 'utf-8').encode(), x[1]) if x[0] else x[1]) for x in emails)
 
-def parse_address_string(s) :
+def parse_address_string(email_addresses) :
+    """
+    Parse comma-separated list of email addresses to structured list of tuples (Name, Address)
+
+    :param email_addresses: comma-separated list of email addresses, e.g 'Vasya Pupkine <vasya@pupkine.nu>, president@kremlin.ru'
+    :return: list of couples (Name or None, email), e.g. [('Vasya Pupkine ', 'vasya@pupkine.nu'), (None, 'president@kremlin.ru')]
+    """
     import pyparsing as pp
 
-    host = pp.Combine(pp.delimitedList(pp.Word(pp.alphanums), '.', combine=True)).setParseAction(pp.downcaseTokens)
-    email = pp.Combine(pp.Word(pp.alphanums) + "@" + host)
+    host = pp.Combine(pp.delimitedList(pp.Word(pp.alphanums), '.', combine=True))\
+                        .setParseAction(pp.pyparsing_common.downcaseTokens)
+    email = pp.Combine(pp.Word(pp.alphanums, pp.alphanums+'-.') + "@" + host)
 
-    name = pp.CharsNotIn(',<"') |  pp.dblQuotedString.setParseAction(pp.removeQuotes)
+    name = pp.CharsNotIn(',<"') | pp.dblQuotedString.setParseAction(pp.removeQuotes)
     recipient = pp.Group(name + "<" + email + ">" | email)
     rcp_list = pp.delimitedList(recipient, ',') + pp.StringEnd()
 
     try :
-        return [(None,x[0]) if len(x) == 1 else (x[0], x[2]) for x in rcp_list.parseString(s)]
+        return [(None,x[0]) if len(x) == 1 else (x[0], x[2]) for x in rcp_list.parseString(email_addresses)]
     except pp.ParseException as err :
-        logging.error("Cannot parse %s: %s", s, err)
+        logging.error("Cannot parse %s: %s", email_addresses, err)
         return None
 
 def test() :
