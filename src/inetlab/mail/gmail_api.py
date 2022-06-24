@@ -64,7 +64,7 @@ def login(permissions) :
             exit(0)
 
         try :
-            clico = json.loads(ARC4.new(passwd).decrypt(enc).decode('utf-8'))
+            clico = json.loads(ARC4.new(passwd.encode("utf8")).decrypt(enc).decode('utf-8'))
         except Exception as err:
             print("ERROR, probably password is wrong\n"
                   "(Original error: " + str(err) + ")", file=sys.stderr)
