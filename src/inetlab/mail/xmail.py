@@ -154,6 +154,10 @@ def send_email(subject, html,
             else :
                 # try :
                     # https://developers.google.com/gmail/api/guides/sending#python
+                # with open("/tmp/message", "w") as fh_msg :
+                #     fh_msg.write(msg_content)
+                # print("Saved /tmp/message")
+
                 res = service.users()\
                              .messages()\
                              .send(userId="me", body={'raw': urlsafe_b64encode(msg_content.encode('utf-8')).decode('utf-8')})\

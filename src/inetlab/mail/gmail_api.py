@@ -49,7 +49,7 @@ def login(permissions) :
                     print("ERROR: Passwords don't match, try again")
                 with open(fclicoen, "wb") as fh :
                     # print(repr(ARC4.new(p1).encrypt(plain)))
-                    fh.write(ARC4.new(p1).encrypt(plain))
+                    fh.write(ARC4.new(p1.encode("utf-8")).encrypt(plain))
                 yes = input("Information encrypted and saved, remove original [Y] ? ")
                 if yes.lower() not in ['n', 'no'] :
                     os.remove(fclico)
