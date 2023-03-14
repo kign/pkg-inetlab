@@ -197,7 +197,12 @@ def send_email(subject, html,
 
 def make_list(emails) :
     from email.header import Header
-    return ", ".join(("{} <{}>".format(x[0] if x[0].isascii() else Header(x[0], 'utf-8').encode(), x[1]) if x[0] else x[1]) for x in emails)
+    def quote_if_needed(x) :
+        if ',' in x :
+            return '"' + x + '"'
+        return x
+
+    return ", ".join(("{} <{}>".format(quote_if_needed(x[0] if x[0].isascii() else Header(x[0], 'utf-8').encode()), x[1]) if x[0] else x[1]) for x in emails)
 
 def parse_address_string(email_addresses) :
     """
