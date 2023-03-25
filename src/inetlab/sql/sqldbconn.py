@@ -1,10 +1,14 @@
 import os, re, logging, inspect
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, __version__ as sqlalchemy_version
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.pool import NullPool
 
 class SQLDBConnector :
     def __init__ (self, pool=None, engine_url=None, engine_url_dbg=None, echo=False) :
+        if not sqlalchemy_version.startswith("1.") :
+            logging.critical("This implementation is incopatible with SQLAlchemy version %s", sqlalchemy_version)
+            logging.info("To revert back to 1.4.44, run this command: python3 -m pip install --force-reinstall 'SQLAlchemy==1.4.44'")
+            exit(1)
 
         assert int(pool is None) + int(engine_url is None) == 1, \
             "Exactly one of `pool` and `engine_url` must be provided"
