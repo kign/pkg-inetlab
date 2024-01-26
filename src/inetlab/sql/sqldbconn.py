@@ -1,14 +1,19 @@
 import os, re, logging, inspect
-from sqlalchemy import create_engine, __version__ as sqlalchemy_version
+
+from sqlalchemy import create_engine, __version__ as sqlalchemy_version, text as text_wrapper
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.pool import NullPool
 
+re_execute1 = re.compile('%s')
+re_execute2 = re.compile(r'(?:(_binary|_text)\s+)?:([a-z0-9_]+)')
+
 class SQLDBConnector :
     def __init__ (self, pool=None, engine_url=None, engine_url_dbg=None, echo=False) :
-        if not sqlalchemy_version.startswith("1.") :
-            logging.critical("This implementation is incopatible with SQLAlchemy version %s", sqlalchemy_version)
-            logging.info("To revert back to 1.4.44, run this command: python3 -m pip install --force-reinstall 'SQLAlchemy==1.4.44'")
-            exit(1)
+        self._sqlalchemy2 = not sqlalchemy_version.startswith("1.")
+
+        if self._sqlalchemy2 :
+            # To revert back to 1.4.44, run this command: python3 -m pip install --force-reinstall 'SQLAlchemy==1.4.44
+            logging.info("SQLAlchemy version %s, support is experimental", sqlalchemy_version)
 
         assert int(pool is None) + int(engine_url is None) == 1, \
             "Exactly one of `pool` and `engine_url` must be provided"
@@ -60,7 +65,85 @@ class SQLDBConnector :
                 logging.info("Unset dry run mode")
         return old_dry_run
 
+    def execute2(self, in_query, **pars) :
+        assert self._sqlalchemy2
+
+        if self._conn is None:
+            self._conn = self._pool.connect ()
+            logging.info("Allocating connection from pool")
+
+        stack = inspect.stack ()
+        ii = 0
+        while 'execute' in stack[ii][3] : ii += 1
+        caller = "{}:{}".format(os.path.basename(stack[ii][1]), stack[ii][2])
+        query = re.compile(r'\s+').sub(' ',in_query.format(**self.tables)).strip()
+        issel = query.lower().startswith('select')
+        res = False
+        if len(pars) == 0 :
+            logging.info(caller + " ~~ " + query)
+            if issel or not self._dry_run :
+                res = self._conn.execute(text_wrapper(query))
+        else :
+            # logging.info("query = %s, pars = %s", query, pars)
+            lim = 50
+            def ps(m) :
+                k = m.group(2)
+                if k in pars:
+                    if m.group(1) == '_text' :
+                        assert isinstance(pars[k], str), "parameter of type " + type(par[k])
+                        text_par = pars[k]
+                        if len(text_par) > lim :
+                            text_par = text_par[:lim-3] + '...'
+                        return f"TXT[{text_par}[{len(pars[k])} chars]]"
+                    elif m.group(1) == '_binary' :
+                        assert isinstance(pars[k], bytes), "parameter of type " + type(par[k])
+                        ascii_par = pars[k].hex()
+                        if len(ascii_par) > 10 :
+                            ascii_par = ascii_par[:10] + '...'
+                        return f"BIN[{ascii_par}[{len(pars[k])} bytes]]"
+                    elif isinstance(pars[k], str) :
+                        if len(pars[k]) > lim :
+                            return pars[k][:lim-3] + '...'
+                        else :
+                            return pars[k]
+                    else :
+                        return str(pars[k])
+                else :
+                    return f"<ERROR:{k}>"
+            logging.info(caller + " ~~ " + re_execute2.sub(ps, query))
+            if issel or not self._dry_run :
+                res = self._conn.execute(text_wrapper(query.replace('_text :', '')), pars)
+        if res is False :
+            logging.debug("Query not actually run in dry run mode")
+            return res
+        n = res.rowcount
+        if n :
+            logging.debug("Query returned: %d", n)
+
+        self._close_proxy()
+        self._proxy = res
+        return n
+
     def execute(self, in_query, *pars) :
+        if self._sqlalchemy2 :
+            # logging.info("query[1] = %s, pars = %s", in_query, pars)
+
+            idx = [0]
+            def par_sub(m) :
+                idx[0] += 1
+                return f":par_{idx[0]} "
+
+            query2 = re_execute1.sub(par_sub, in_query)
+            assert idx[0] == len(pars), f"passed {len(pars)} pars but only replaced {idx[0]}"
+
+            pars2 = {f"par_{x+1}" : pars[x] for x in range(len(pars))}
+            return self.execute2(query2, **pars2)
+        else :
+            return self.execute1(in_query, *pars)
+
+    def execute1(self, in_query, *pars) :
+        assert not self._sqlalchemy2
+
         if self._conn is None:
             self._conn = self._pool.connect ()
             logging.info("Allocating connection from pool")
@@ -115,11 +198,12 @@ class SQLDBConnector :
     def commit(self) :
         # https://stackoverflow.com/questions/26717790/how-to-set-autocommit-1-in-a-sqlalchemy-engine-connection
         # Wne not dealing with transactions, auto-commit is assumed
-        logging.info("commit() has no effect in no-transaction mode")
-        if False:
+        if self._sqlalchemy2 :
             logging.debug("COMMIT" + (" (dry run mode)" if self._dry_run else ""))
             if not self._dry_run :
                 return self._conn.commit()
+        else :
+            logging.info("commit() has no effect in no-transaction mode")
 
     def commit_on_exit (self) :
         self.commit_requested = True
@@ -132,11 +216,12 @@ class SQLDBConnector :
     def rollback(self) :
         # https://stackoverflow.com/questions/26717790/how-to-set-autocommit-1-in-a-sqlalchemy-engine-connection
         # Wne not dealing with transactions, auto-commit is assumed
-        logging.warning("rollback() has no effect in no-transaction mode")
-        if False:
+        if self._sqlalchemy2 :
             logging.debug("ROLLBACK"  + (" (dry run mode)" if self._dry_run else ""))
             if not self._dry_run :
                 return self._conn.rollback()
+        else :
+            logging.warning("rollback() has no effect in no-transaction mode")
 
     def close(self) :
         if self._conn :

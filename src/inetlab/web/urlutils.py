@@ -60,9 +60,7 @@ def urlencode_x(query) :
     return "&".join(res)
 
 def urlmodifylow (url, re_exclude, **params) :
-    from urllib.parse import urlparse, urlunparse
-    from cgi import parse_qs
-    from urllib.parse import urlencode
+    from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 
     # if url is Unicode here, rusults are funny :)
     scheme, host, path, pars, query, frag = urlparse ( str(url) )
