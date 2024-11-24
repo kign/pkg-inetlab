@@ -4,7 +4,7 @@ from sqlalchemy import create_engine, __version__ as sqlalchemy_version, text as
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.pool import NullPool
 
-re_execute1 = re.compile('%s')
+re_execute1 = re.compile('(?<!%)%s')
 re_execute2 = re.compile(r'(?:(_binary|_text)\s+)?:([a-z0-9_]+)')
 
 class SQLDBConnector :
@@ -134,7 +134,7 @@ class SQLDBConnector :
                 return f":par_{idx[0]} "
 
             query2 = re_execute1.sub(par_sub, in_query)
-            assert idx[0] == len(pars), f"passed {len(pars)} pars but only replaced {idx[0]}"
+            assert idx[0] == len(pars), f"query {in_query}, passed {len(pars)} pars but replaced {idx[0]}"
 
             pars2 = {f"par_{x+1}" : pars[x] for x in range(len(pars))}
             return self.execute2(query2, **pars2)
