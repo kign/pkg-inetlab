@@ -14,7 +14,7 @@ def gae_engine_url(db, remote = False) :
         sub_pswd = pswd[0] + '*' * (len(pswd) - 2) + pswd[-1]
 
     if os.getenv('GAE_ENV', '').startswith('standard') :
-        # GAE produnction environment
+        # GAE production environment
 
         unix_socket = os.path.join(os.environ.get("DB_SOCKET_DIR", "/cloudsql"),
              os.environ.get('CLOUDSQL_CONNECTION_NAME'))

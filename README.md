@@ -58,7 +58,7 @@ synlogin.setup_partners(google_client_id=os.getenv('GOOGLE_CLIENT_ID'),
 from flask import session, url_for, render_template
 
 state = str(uuid.uuid4())
-sesson['state'] = state
+session['state'] = state
 
 render_template('home.html',
    ms_auth_url=synlogin.MSLogin.build_auth_url(
