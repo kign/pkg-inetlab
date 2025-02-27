@@ -1,0 +1,23 @@
+{
+    "flake8.args": [
+        "--config=/Users/kignatiev/.config/flake8"
+    ],
+    "cSpell.words": [
+        "authoriz",
+        "cloudsql",
+        "colorterm",
+        "genformatter",
+        "getenv",
+        "htmladdons",
+        "htmlbuilder",
+        "inetlab",
+        "infile",
+        "inputlib",
+        "inputnums",
+        "jsescape",
+        "pswd",
+        "synauth",
+        "synlogin",
+        "xmail"
+    ]
+}
