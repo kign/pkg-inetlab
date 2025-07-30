@@ -39,7 +39,7 @@ def normalize_csv_header(h) :
         nch_cnt += 1
         h = "undef_%d" % nch_cnt
     else :
-        h = re.sub(r'_+$', '', re.sub(r'_+', '_', h.lower().replace(' #','').replace(" ","_").replace('#','').replace('(','').replace(')','').replace('@','_at_').replace('-','_').replace('$','_')))
+        h = re.sub(r'_+$', '', re.sub(r'_+', '_', h.lower().replace(' #','').replace(" ","_").replace('#','').replace('(','').replace(')','').replace('@','_at_').replace('-','_').replace('$','_').replace('?','')))
         if h in keyword.kwlist :
             h = h + "_"
         if h == "propery" :
