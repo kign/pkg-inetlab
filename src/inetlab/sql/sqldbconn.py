@@ -131,7 +131,7 @@ class SQLDBConnector :
             idx = [0]
             def par_sub(m) :
                 idx[0] += 1
-                return f":par_{idx[0]} "
+                return f":par_{idx[0]}"
 
             query2 = re_execute1.sub(par_sub, in_query)
             assert idx[0] == len(pars), f"query {in_query}, passed {len(pars)} pars but replaced {idx[0]}"

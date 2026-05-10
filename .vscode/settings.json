@@ -1,4 +1,5 @@
 {
+    "python.analysis.typeCheckingMode": "standard",
     "flake8.args": [
         "--config=/Users/kignatiev/.config/flake8"
     ],
