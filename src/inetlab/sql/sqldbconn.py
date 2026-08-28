@@ -1,4 +1,5 @@
 import os, re, logging, inspect
+from typing import ClassVar
 
 from sqlalchemy import create_engine, __version__ as sqlalchemy_version, text as text_wrapper
 from sqlalchemy.orm import sessionmaker, scoped_session
@@ -8,6 +9,10 @@ re_execute1 = re.compile('(?<!%)%s')
 re_execute2 = re.compile(r'(?:(_binary|_text)\s+)?:([a-z0-9_]+)')
 
 class SQLDBConnector :
+    # Must be provided by derived classes
+    tables : ClassVar[dict[str, str]]
+    app_yaml : ClassVar[str]
+
     def __init__ (self, pool=None, engine_url=None, engine_url_dbg=None, echo=False) :
         self._sqlalchemy2 = not sqlalchemy_version.startswith("1.")
 
@@ -90,13 +95,13 @@ class SQLDBConnector :
                 k = m.group(2)
                 if k in pars:
                     if m.group(1) == '_text' :
-                        assert isinstance(pars[k], str), "parameter of type " + type(par[k])
+                        assert isinstance(pars[k], str), f"parameter {k} of type {type(pars[k]).__name__}"
                         text_par = pars[k]
                         if len(text_par) > lim :
                             text_par = text_par[:lim-3] + '...'
                         return f"TXT[{text_par}[{len(pars[k])} chars]]"
                     elif m.group(1) == '_binary' :
-                        assert isinstance(pars[k], bytes), "parameter of type " + type(par[k])
+                        assert isinstance(pars[k], bytes), f"parameter {k} of type {type(pars[k]).__name__}"
                         ascii_par = pars[k].hex()
                         if len(ascii_par) > 10 :
                             ascii_par = ascii_par[:10] + '...'
@@ -112,7 +117,7 @@ class SQLDBConnector :
                     return f"<ERROR:{k}>"
             logging.info(caller + " ~~ " + re_execute2.sub(ps, query))
             if issel or not self._dry_run :
-                res = self._conn.execute(text_wrapper(query.replace('_text :', '')), pars)
+                res = self._conn.execute(text_wrapper(query.replace('_text', '')), pars)
         if res is False :
             logging.debug("Query not actually run in dry run mode")
             return res
@@ -200,7 +205,7 @@ class SQLDBConnector :
         # Wne not dealing with transactions, auto-commit is assumed
         if self._sqlalchemy2 :
             logging.debug("COMMIT" + (" (dry run mode)" if self._dry_run else ""))
-            if not self._dry_run :
+            if not self._dry_run and self._conn:
                 return self._conn.commit()
         else :
             logging.info("commit() has no effect in no-transaction mode")
@@ -218,7 +223,7 @@ class SQLDBConnector :
         # Wne not dealing with transactions, auto-commit is assumed
         if self._sqlalchemy2 :
             logging.debug("ROLLBACK"  + (" (dry run mode)" if self._dry_run else ""))
-            if not self._dry_run :
+            if not self._dry_run and self._conn :
                 return self._conn.rollback()
         else :
             logging.warning("rollback() has no effect in no-transaction mode")
@@ -234,19 +239,23 @@ class SQLDBConnector :
             self.session = None
 
     def fetchone(self) :
+        assert self._proxy
         res = self._proxy.fetchone()
         self._close_proxy ()
         return res
 
     def fetchall(self) :
+        assert self._proxy
         res = self._proxy.fetchall()
         self._close_proxy ()
         return res
 
     def get_columns(self) :
+        assert self._proxy
         return self._proxy._metadata.keys
 
     def __iter__(self) :
+        assert self._proxy
         return iter(self._proxy)
 
     def print_formatted(self) :
@@ -261,6 +270,7 @@ class SQLDBConnector :
         from ..cli.genformatter import GenericFormatter
         out = GenericFormatter("aligned,width=30")
         irow = 0
+        assert self._conn
         for row in self._conn :
             irow += 1
             if irow == 1 :
