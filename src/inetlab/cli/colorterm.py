@@ -2,8 +2,8 @@ import os,sys,logging
 
 def add_coloring_to_emit_ansi(fn):
     # http://stackoverflow.com/questions/384076/how-can-i-color-python-logging-output
-    def new(*args):
-        levelno = args[1].levelno
+    def new(self, record: logging.LogRecord) -> None:
+        levelno = record.levelno
         if(levelno >= 50):
             color = '\x1b[31;1m'  # red
         elif(levelno >= 40):
@@ -16,8 +16,8 @@ def add_coloring_to_emit_ansi(fn):
             color = '\x1b[35m'  # pink
         else:
             color = '\x1b[0m'  # normal
-        args[1].msg = color + args[1].msg + '\x1b[0m'  # normal
-        return fn(*args)
+        record.msg = color + str(record.msg) + '\x1b[0m'  # normal
+        return fn(self, record)
     return new
 
 class ColorTerminal(object) :
@@ -39,7 +39,7 @@ class ColorTerminal(object) :
 
     def clear_sceeen(self) :
         if self.term :
-            sys.stdout.write(self.term.clear())
+            sys.stdout.write(self.term.clear())  # type: ignore[call-arg]
         else :
             os.system('clear')
 

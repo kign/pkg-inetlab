@@ -1,4 +1,5 @@
 {
+    "python.analysis.typeCheckingMode": "standard",
     "flake8.args": [
         "--config=/Users/kignatiev/.config/flake8"
     ],
@@ -6,6 +7,7 @@
         "authoriz",
         "cloudsql",
         "colorterm",
+        "dbgyamlenv",
         "genformatter",
         "getenv",
         "htmladdons",
@@ -14,8 +16,12 @@
         "infile",
         "inputlib",
         "inputnums",
+        "issel",
         "jsescape",
         "pswd",
+        "sessionmaker",
+        "sqla",
+        "SQLDB",
         "synauth",
         "synlogin",
         "xmail"
