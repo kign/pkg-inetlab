@@ -182,7 +182,7 @@ def input_numbers(prompt, n, flat: bool, extend=None) :
         - flat (bool, default=False)   return flat list of numbers, not list of intervals
 
         - extend(array of strings, default=[])  provide additional list of valid entries, in addition to
-            o numbers and intervalis
+            o numbers and intervals
             o 'quit', 'all' or 'none' (case insensitive and could be shortened to 1-st letter)
     """
 ```
@@ -240,7 +240,7 @@ Hope it worked!
 NOTES:
 
  * If you want to send emails from your GMail account, you have two options: (1) using SMTP which requires you to explicitly go to [this page](https://myaccount.google.com/lesssecureapps) allow access to "less secure" apps (and then it'll periodically revert to default, so once you see your SMTP authentication failing you'll need to do it again); or (2) use official GMail API, which requires you to register your "app" with Google's [GCloud](https://console.cloud.google.com/) and to authenticate your account in browser more or less every time you'll need to use it (thus preventing any background use).
- * You can specify addressees as an array `[(name1, address1),(name2, address2),...,(nameN, addressN)]` (any `name` could be `None`), or as comma-separated string `name1 <address1>, name2 <address2>,...` (name could have commans if quoted). If using later option, we'll use [pyparsing](https://pypi.org/project/pyparsing/) to parse.
+ * You can specify addressees as an array `[(name1, address1),(name2, address2),...,(nameN, addressN)]` (any `name` could be `None`), or as comma-separated string `name1 <address1>, name2 <address2>,...` (name could have commas if quoted). If using later option, we'll use [pyparsing](https://pypi.org/project/pyparsing/) to parse.
 
 ## inetlab.html
 

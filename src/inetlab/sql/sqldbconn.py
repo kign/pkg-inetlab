@@ -16,9 +16,9 @@ class SQLDBConnector :
     def __init__ (self, pool=None, engine_url=None, engine_url_dbg=None, echo=False) :
         self._sqlalchemy2 = not sqlalchemy_version.startswith("1.")
 
-        if self._sqlalchemy2 :
+        # if self._sqlalchemy2 :
             # To revert back to 1.4.44, run this command: python3 -m pip install --force-reinstall 'SQLAlchemy==1.4.44
-            logging.info("SQLAlchemy version %s, support is experimental", sqlalchemy_version)
+            # logging.info("SQLAlchemy version %s, support is experimental", sqlalchemy_version)
 
         assert int(pool is None) + int(engine_url is None) == 1, \
             "Exactly one of `pool` and `engine_url` must be provided"
@@ -60,7 +60,7 @@ class SQLDBConnector :
 
         dbgyamlenv.set_env_from_yaml(app_yaml)
 
-    def set_dry_run(self, dry_run=True) :
+    def set_dry_run(self, dry_run : bool = True) -> None :
         old_dry_run = self._dry_run
         if dry_run != old_dry_run :
             self._dry_run = dry_run
@@ -70,7 +70,7 @@ class SQLDBConnector :
                 logging.info("Unset dry run mode")
         return old_dry_run
 
-    def execute2(self, in_query, **pars) :
+    def execute2(self, in_query, **pars) -> int :
         assert self._sqlalchemy2
 
         if self._conn is None:
@@ -129,7 +129,7 @@ class SQLDBConnector :
         self._proxy = res
         return n
 
-    def execute(self, in_query, *pars) :
+    def execute(self, in_query, *pars) -> int :
         if self._sqlalchemy2 :
             # logging.info("query[1] = %s, pars = %s", in_query, pars)
 
@@ -146,7 +146,7 @@ class SQLDBConnector :
         else :
             return self.execute1(in_query, *pars)
 
-    def execute1(self, in_query, *pars) :
+    def execute1(self, in_query, *pars) -> int :
         assert not self._sqlalchemy2
 
         if self._conn is None:
@@ -200,7 +200,7 @@ class SQLDBConnector :
         self._proxy = res
         return n
 
-    def commit(self) :
+    def commit(self) -> None :
         # https://stackoverflow.com/questions/26717790/how-to-set-autocommit-1-in-a-sqlalchemy-engine-connection
         # Wne not dealing with transactions, auto-commit is assumed
         if self._sqlalchemy2 :
