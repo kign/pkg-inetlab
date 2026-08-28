@@ -1,6 +1,6 @@
 ################ FAST START ################
 
-"""
+r"""
 req = urllib2.Request('http://www.ptc.com/')
 res = urllib2.urlopen(req)
 xdom = xml.dom.minidom.parse (html2xml.Parser (res.read(), feed_unicode = True))
@@ -15,8 +15,8 @@ print(re.sub ( "(\n\s*)+\n", "\n", xdom.toprettyxml("  ").encode ( "utf-8" ) ))
 
 # import html2xml
 #
-# def my_log(self,cls,lineno,msg) :
-#     raise RuntimeError("[%s:%d] %s" % (cls,lineno,msg))
+# def my_log(self,log_type,lineno,msg) :
+#     raise RuntimeError("[%s:%d] %s" % (log_type,lineno,msg))
 # html2xml.Parser.log = my_log
 #
 # html_parser = html2xml.Parser (
@@ -72,7 +72,7 @@ print(re.sub ( "(\n\s*)+\n", "\n", xdom.toprettyxml("  ").encode ( "utf-8" ) ))
 #
 # The parser as implemented here does not attempt to solve this problem
 # for you; it has an option to disregard any content of "SCRIPT" tag
-# (which is a default behaviour) or turn it into CDATA, but if python's
+# (which is a default behavior) or turn it into CDATA, but if python's
 # HTMLParser chokes on your script content, there is nothing we can do
 # to help.
 #
@@ -125,20 +125,12 @@ class Parser(html.parser.HTMLParser) :
     # implementing push => pull gateway
     def __init__ (self, reader_in,
                   dbg_file_xml=None, dbg_file_html=None, wrappertag=None,
-                  dbg_file_structure=None
-                  # enc_in = "utf-8",
-                  # feed_unicode = False # for compatibility; use True in new code
-                  #                      # see comment above
-                  ) :
+                  dbg_file_structure=None) :
         html.parser.HTMLParser.__init__ (self)
         self.stack = []
 
         if isinstance(reader_in, str) :
             self.reader = StringIO(reader_in)
-        # if type(reader_in) == type("") :
-        #     self.reader = StringIO(reader_in.encode("utf-8"))
-        # elif type(reader_in) == type("") :
-        #     self.reader = StringIO(reader_in)
         else :
             self.reader = reader_in
 
@@ -147,7 +139,6 @@ class Parser(html.parser.HTMLParser) :
         self.eof = False
         self.dbgxmlout = None
         self.dbglineno = 0
-        # self.feed_unicode = feed_unicode
         if dbg_file_xml is not None :
             self.dbgxmlout = open ( dbg_file_xml, "w" )
         self.dbghtmlout = None
@@ -159,7 +150,6 @@ class Parser(html.parser.HTMLParser) :
             self.dbgstructout.write(";;; -*- tab-width: 3 -*-\n")
 
         self.enc_out = "utf-8"
-        # self.enc_in = enc_in
         self.dbg_enc_out = self.enc_out
 
         self.old_xhtml = htmlbuilder.set_xhtml(True)
@@ -177,23 +167,19 @@ class Parser(html.parser.HTMLParser) :
 
         self.script_content = []
 
-#        self.CDATA_CONTENT_ELEMENTS = []
-
-#        self.dbg_count = 0
-
-    # to be overriden if need to fix HTML markup
+    # to be overridden if need to fix HTML markup
     def fixhtmlline (self, line) :
         return line
 
-    # to be overriden to print custom messages or raise exception
-    def log(self,cls,lineno,msg) :
+    # to be overridden to print custom messages or raise exception
+    def log(self,log_type,lineno,msg) :
         pass
 
-    def _log(self,cls,msg) :
-        self.log (cls,self.dbglineno,msg)
+    def _log(self,log_type,msg) :
+        self.log (log_type,self.dbglineno,msg)
 
-    def _fatal(self, cls, msg) :
-        raise RuntimeError("[%s:%d] %s" % ("FATAL:" + cls,self.dbglineno,msg))
+    def _fatal(self, log_type, msg) :
+        raise RuntimeError("[%s:%d] %s" % ("FATAL:" + log_type,self.dbglineno,msg))
 
     def pull(self):
         if self.eof: return
@@ -202,7 +188,7 @@ class Parser(html.parser.HTMLParser) :
         if not line:
             self.eof = True
             self.reader.close()
-            self.close()
+            self.parser_close()
             if self.dbghtmlout  : self.dbghtmlout.close ()
             if self.dbgstructout: self.dbgstructout.close()
             if self.wrappertag is not None :
@@ -210,22 +196,7 @@ class Parser(html.parser.HTMLParser) :
             return
 
         line = self.fixhtmlline(line)
-
-        # if self.feed_unicode :
-        #     try :
-        #         uline = str(line, self.enc_in)
-        #     except UnicodeDecodeError as err :
-        #         self._fatal("ENCODING", "encoding: %r, err: %r" % (self.enc_in, err))
-        #     self.feed (uline)
-        # else :
-        #     self.feed (line)
-
         self.feed (line)
-
-        # try :
-        #     self.feed ( unicode(line, self.enc_in) )
-        # except Exception, err :
-        #     self._fatal ("HTMLERROR", "feed(%r): %s" % (line,err) )
 
     def read ( self, req = None ) :
         res = []
@@ -261,16 +232,6 @@ class Parser(html.parser.HTMLParser) :
 """ % self.dbg_enc_out)
                 self.dbgxmlout.close()
 
-#        logging.info (repr(res))
-#        self.dbg_count += 1
-#        logging.info ("dbg_count = %d" % self.dbg_count)
-#        logging.info (repr("".join ( res )[:200]))
-
-#        jj = 685
-#        logging.info("res[%d] = %r" % (jj,res[jj]))
-#        for ii in range(len(res)) :
-#            x = "".join(res[:ii])
-#            logging.info("ii = %d (out of %d) OK" % (ii, len(res)))
         return "".join ( res ).encode ( self.enc_out )
 
     def _write(self, s):
@@ -278,11 +239,13 @@ class Parser(html.parser.HTMLParser) :
         self.tbuffer += len(s)
 
     def handle_startendtag(self, tag, attrs):
+        self._log("INFO:STARTENDTAG", f"<{tag} {attrs}/>")
         if self.dbgstructout:
             self.dbgstructout.write("\t" * len(self.stack) + "<%s/>   %d\n" % (tag, self.dbglineno))
         self.handle_starttag(tag, attrs, True)
 
     def handle_starttag(self, tag, attrs, closes=False):
+        self._log("INFO:STARTTAG", f"<{tag} {attrs}>")
         if not retagname.match(tag):
             self._log("ERR:BADTAGNAME", "Tag '%s' is invalid" % tag)
             return
@@ -310,10 +273,6 @@ class Parser(html.parser.HTMLParser) :
                 continue
 
             d_a[p] = v
-            # if type(v) == type("") :
-            #     d_a[p] = str(v,self.enc_in) # unicode(v,"windows-1255")
-            # else :
-            #     d_a[p] = v
 
         if closes:
             d_a['__NOENDTAG__'] = True
@@ -331,6 +290,7 @@ class Parser(html.parser.HTMLParser) :
         self._write (htmlbuilder.TAG(tag, 0, ** d_a))
 
     def handle_endtag(self, tag):
+        self._log("INFO:ENDTAG", f"</{tag}>")
         if not retagname.match(tag):
             self._log("ERR:BADTAGNAME", "Tag '%s' is invalid" % tag)
             return
@@ -355,9 +315,6 @@ class Parser(html.parser.HTMLParser) :
         while True:
             iter += 1
             st_tag = self.stack.pop ()
-#            self._write ("  "*len(self.stack) + "</" + st_tag + ">" + "\n")
-#           if self.dbgxmlout : self._write ( "<!-- lineno: %d, iter = %d, tag = %s, st_tag = %s -->" %
-#                                              (self.dbglineno, iter, tag, st_tag) )
             self._write ( "</" + st_tag + ">" )
             if tag == st_tag :
                 break
@@ -369,6 +326,11 @@ class Parser(html.parser.HTMLParser) :
                               (st_tag, tag))
 
     def handle_data  ( self, data ) :
+        xData = re.sub(r" {2,}", " ", data)
+        def escape_special(s, fmt="\\x{:02x}"):
+            return re.sub(r"[\x00-\x1f\x7f]", lambda m: fmt.format(ord(m.group())), s)
+        dbg_data = escape_special(xData if len(xData) < 50 else f"{xData[:25]}...[{len(xData) - 20} chars skipped]...{xData[-25:]}")
+        self._log("INFO:DATA", dbg_data)
         # E.g. blank line in the beginning of the file
         if self.dbghtmlout :
             #self.dbghtmlout.write ( data.encode ( self.enc_in ) + "\n" )
@@ -379,16 +341,12 @@ class Parser(html.parser.HTMLParser) :
                 self.script_content.append(data)
         else :
             self._write (htmlbuilder.htmlspecialchars(data))
-            # if type(data) == type("") :
-            #     self._write (htmlbuilder.htmlspecialchars(data))
-            # else :
-            #     self._write (str ( htmlbuilder.htmlspecialchars(data), self.enc_in ))
 
-    def handle_charref (self, num) :
-        if num[0] == 'x' :
-            val = int(num[1:], 16)
+    def handle_charref (self, name) :
+        if name[0] == 'x' :
+            val = int(name[1:], 16)
         else :
-            val = int(num)
+            val = int(name)
 
         # http://www.w3.org/TR/REC-xml/#charsets
         # #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]
@@ -401,13 +359,13 @@ class Parser(html.parser.HTMLParser) :
              0x10000 <= val <= 0x10FFFF
 
         if ok :
-            self._write ( "&#" + num + ";" )
+            self._write ( "&#" + name + ";" )
             if self.dbghtmlout :
-                self.dbghtmlout.write ( "&#" + num + ";"  + "\n" )
+                self.dbghtmlout.write ( "&#" + name + ";"  + "\n" )
         else :
             self._write ( "&#" + "xFFFD" + ";" )
             if self.dbghtmlout :
-                self.dbghtmlout.write ( "&#" + num + ";"  + " [invalid]\n" )
+                self.dbghtmlout.write ( "&#" + name + ";"  + " [invalid]\n" )
 
 
     def handle_entityref (self, name) :
@@ -417,7 +375,7 @@ class Parser(html.parser.HTMLParser) :
 
     def handle_comment(self,data) :
         if not self.skip_comments :
-            self._write ( "<!--" + str(data,self.enc_out) + "-->" )
+            self._write ( "<!--" + data + "-->" )
 
     def handle_decl(self,decl) :
 #       <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" >
@@ -426,11 +384,13 @@ class Parser(html.parser.HTMLParser) :
         return
         self._write ( decl )
 
-    def handle_pi (self, pi ) :
+    def handle_pi (self, data) :
         pass
 
-    def close (self) :
-        if ( self.stack != [] ) :
+    def parser_close (self) :
+        self._log("INFO:CLOSE", "-")
+        self.close()
+        if self.stack != [] :
             self._log ( "ERR:NOTCLOSEDEND",
                         "Input exhausted, but %d tag(s) remain to be closed: [%s]" %
                        (len(self.stack), ";".join(self.stack)) )
@@ -471,7 +431,7 @@ class Parser(html.parser.HTMLParser) :
                           Parser.NORM_SPLIT_ENDTAGS,
                           Parser.NORM_REMOVE]
 
-        def script_replace(m):
+        def script_replace(m) -> str:
             if method == Parser.NORM_REMOVE:
                 return ""
 
@@ -491,9 +451,6 @@ class Parser(html.parser.HTMLParser) :
                 content = content.replace(' -->', ' ==>').replace('<!--', '<!==')
                 return '<script%s><!--\n%s\n//-->\n</script>' % (pars, content)
 
-#            return "<script%s><!--\n<![CDATA[\n%s]]>\n//-->\n</script>" % (pars, content)
-#            return '\n<!--\n%s\n//-->\n' % (content,)
-#            return ""
-#            return '<script%s>\n<!--\n%s\n//-->\n</script>' % (pars, content)
+            raise RuntimeError("Unknown normalization method " + repr(method))
 
         return rescript.sub(script_replace, html_in)

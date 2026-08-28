@@ -22,7 +22,7 @@ def htmlspecialchars(s):
 
 def TAG ( tag, level = 0, **attrs ) :
     '''tag: HTML tag;
-       level (optonal): indentation level;
+       level (optional): indentation level;
        attrs: attributes passed as keyed arguments
               special attribute "_" (single underscore) serves for tag content'''
 
@@ -60,7 +60,7 @@ def TAG ( tag, level = 0, **attrs ) :
         # text is considered "multiline" when it ends with CR;
         # however, single CR does not make a multi-line text
         # (otherwise, one could't have closing tag on the next like,
-        # which is necessery, e.g., for SCRIPT tags)
+        # which is necessary, e.g., for SCRIPT tags)
         try :
             ml = text[-1:] == "\n" and text != "\n"
         except :
