@@ -1,7 +1,7 @@
 import os, re, logging, inspect
-from typing import ClassVar
+from typing import Any, ClassVar
 
-from sqlalchemy import create_engine, __version__ as sqlalchemy_version, text as text_wrapper
+from sqlalchemy import create_engine, __version__ as sqlalchemy_version, text as text_wrapper, Connection, CursorResult, Row
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.pool import NullPool
 
@@ -12,6 +12,8 @@ class SQLDBConnector :
     # Must be provided by derived classes
     tables : ClassVar[dict[str, str]]
     app_yaml : ClassVar[str]
+    _conn : Connection|None
+    _proxy : CursorResult[Any]|None
 
     def __init__ (self, pool=None, engine_url=None, engine_url_dbg=None, echo=False) :
         self._sqlalchemy2 = not sqlalchemy_version.startswith("1.")
@@ -60,7 +62,7 @@ class SQLDBConnector :
 
         dbgyamlenv.set_env_from_yaml(app_yaml)
 
-    def set_dry_run(self, dry_run : bool = True) -> None :
+    def set_dry_run(self, dry_run : bool = True) -> bool :
         old_dry_run = self._dry_run
         if dry_run != old_dry_run :
             self._dry_run = dry_run
@@ -163,7 +165,7 @@ class SQLDBConnector :
         if len(pars) == 0 :
             logging.info(caller + " ~~ " + query)
             if issel or not self._dry_run :
-                res = self._conn.execute(query)
+                res = self._conn.execute(text_wrapper(query))
         elif '_binary %s' in query or '_text %s' in query :
             # logging.debug(caller + " ~~ " + "%s (+ %d params)", query, len(pars))
             npars = []
@@ -182,13 +184,13 @@ class SQLDBConnector :
                     npars.append(pars[ii])
             logging.info(caller + " ~~ " + query, *npars)
             if issel or not self._dry_run :
-                res = self._conn.execute(query.replace('_text %s','%s'), pars)
+                res = self._conn.execute(text_wrapper(query.replace('_text %s','%s')), pars)
         else :
             # logging.info("query = %s, pars = %s", query, pars)
             lim = 50
             logging.info(caller + " ~~ " + query, *[x if not isinstance(x, str) or len(x) < lim + 5 else x[:lim] + '... [%d chars]' % len(x) for x in pars])
             if issel or not self._dry_run :
-                res = self._conn.execute(query, pars)
+                res = self._conn.execute(text_wrapper(query), pars)
         if res is False :
             logging.debug("Query not actually run in dry run mode")
             return res
@@ -238,11 +240,16 @@ class SQLDBConnector :
             self.session.remove ()
             self.session = None
 
-    def fetchone(self) :
+    def fetchone(self) -> Row[Any] | None :
         assert self._proxy
         res = self._proxy.fetchone()
         self._close_proxy ()
         return res
+
+    def getone(self) -> Row[Any] :
+        res = self.fetchone()
+        assert res is not None
+        return res    
 
     def fetchall(self) :
         assert self._proxy
@@ -270,11 +277,11 @@ class SQLDBConnector :
         from ..cli.genformatter import GenericFormatter
         out = GenericFormatter("aligned,width=30")
         irow = 0
-        assert self._conn
-        for row in self._conn :
+        assert self._conn is not None
+        for row in self :
             irow += 1
             if irow == 1 :
-                out.writeheader([desc[0] for desc in self._conn.description])
+                out.writeheader([desc[0] for desc in self.get_columns()])
             out.writerow(list(map(print_column,row)))
         out.close ()
 
