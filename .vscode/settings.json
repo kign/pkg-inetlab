@@ -45,6 +45,8 @@
         "NOTCLOSEDINT",
         "NOTOPENED",
         "npars",
+        "pgpass",
+        "poolclass",
         "premailer",
         "pswd",
         "pyparsing",

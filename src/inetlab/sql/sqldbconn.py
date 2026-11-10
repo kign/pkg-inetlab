@@ -1,6 +1,7 @@
 import os, re, logging, inspect
 from typing import Any, ClassVar
 
+import sqlalchemy
 from sqlalchemy import create_engine, __version__ as sqlalchemy_version, text as text_wrapper, Connection, CursorResult, Row
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.pool import NullPool
@@ -14,6 +15,121 @@ class SQLDBConnector :
     app_yaml : ClassVar[str]
     _conn : Connection|None
     _proxy : CursorResult[Any]|None
+    database: ClassVar[str]
+
+    @classmethod
+    def _local_credentials(cls) :
+        """
+        Only used for local development: on App Engine the app runs as its service account, so Application Default
+        Credentials (ADC) are used as is. Locally, ADC are your own (`gcloud auth application-default login`), and we
+        impersonate the app's service account (from app.yaml) so that IAM database login uses the same DB user as the
+        deployed app. Requires roles/iam.serviceAccountTokenCreator on that service account.
+        """
+        import yaml
+        import google.auth
+        from google.auth import impersonated_credentials
+
+        with open(cls.app_yaml) as f :
+            service_account = yaml.safe_load(f)['service_account']
+        source_credentials, _ = google.auth.default()
+        return impersonated_credentials.Credentials(
+            source_credentials=source_credentials,
+            target_principal=service_account,
+            target_scopes=["https://www.googleapis.com/auth/sqlservice.admin"])
+
+    @classmethod
+    def make_engine_project(cls, gae_project: str, remote_db: bool, local_dev: bool, echo: bool = False) :
+        connect_args = {"charset": "utf8mb4", "local_infile" : True}
+        pool_config : dict[str, Any]
+
+        if remote_db:
+            from google.cloud.sql.connector import Connector
+
+            # https://github.com/GoogleCloudPlatform/python-docs-samples/blob/main/cloud-sql/mysql/sqlalchemy/connect_tcp.py
+            pool_config = {
+                # [START cloud_sql_mysql_sqlalchemy_limit]
+                # Pool size is the maximum number of permanent connections to keep.
+                "pool_size": 5,
+                # Temporarily exceeds the set pool_size if no connections are available.
+                "max_overflow": 2,
+                # The total number of concurrent connections for your application will be
+                # a total of pool_size and max_overflow.
+                # [END cloud_sql_mysql_sqlalchemy_limit]
+                # [START cloud_sql_mysql_sqlalchemy_backoff]
+                # SQLAlchemy automatically uses delays between failed connection attempts,
+                # but provides no arguments for configuration.
+                # [END cloud_sql_mysql_sqlalchemy_backoff]
+                # [START cloud_sql_mysql_sqlalchemy_timeout]
+                # 'pool_timeout' is the maximum number of seconds to wait when retrieving a
+                # new connection from the pool. After the specified amount of time, an
+                # exception will be thrown.
+                "pool_timeout": 30,  # 30 seconds
+                # [END cloud_sql_mysql_sqlalchemy_timeout]
+                # [START cloud_sql_mysql_sqlalchemy_lifetime]
+                # 'pool_recycle' is the maximum number of seconds a connection can persist.
+                # Connections that live longer than the specified amount of time will be
+                # reestablished
+                "pool_recycle": 1800,  # 30 minutes
+                # [END cloud_sql_mysql_sqlalchemy_lifetime]
+            }
+
+            if echo:
+                pool_config['echo'] = echo
+
+            # Only need this locally to avoid the warning (otherwise harmless)
+            if local_dev:
+                os.environ.setdefault("GOOGLE_CLOUD_PROJECT", gae_project)
+                os.environ.setdefault("GOOGLE_CLOUD_QUOTA_PROJECT", gae_project)
+
+            connector = Connector(
+                quota_project=gae_project,
+                credentials=cls._local_credentials() if local_dev else None
+            )
+
+            engine = create_engine(
+                "mysql+pymysql://",
+                creator=lambda: connector.connect(
+                    os.environ['CLOUDSQL_CONNECTION_NAME'],
+                    "pymysql",
+                    user=os.environ['sql_user'],
+                    db=cls.database,
+                    enable_iam_auth=True,
+                    **connect_args
+                ),
+                **pool_config
+            ) 
+  
+        else :
+            host = "localhost"
+            port = 3306
+            pool_config = {
+                "poolclass" : NullPool
+            }
+            if echo:
+                pool_config['echo'] = echo
+
+            prefix = f"{host}:{port}:{cls.database}:"
+            with open(os.path.expanduser('~/.pgpass')) as f :
+                for line in f :
+                    if line.startswith(prefix) :
+                        db_user, db_pass = line.rstrip('\n')[len(prefix):].split(':', 1)
+                        break
+                else :
+                    raise RuntimeError(f"No entry '{prefix}<db_user>:<db_pass>' found in ~/.pgpass")
+
+            # mysql+pymysql://<db_user>:<db_pass>@<db_host>:<db_port>/<db_name>
+            connect_url = sqlalchemy.engine.url.URL.create(
+                            drivername="mysql+pymysql",
+                            username=db_user,
+                            password=db_pass,
+                            host=host,
+                            port=port,
+                            database=cls.database,
+                            query={k: str(v) for k, v in connect_args.items()})
+            print("Connecting to", connect_url)
+            engine = sqlalchemy.create_engine(connect_url, **pool_config)
+
+        return engine
 
     def __init__ (self, pool=None, engine_url=None, engine_url_dbg=None, echo=False) :
         self._sqlalchemy2 = not sqlalchemy_version.startswith("1.")
