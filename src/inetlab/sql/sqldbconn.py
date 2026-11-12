@@ -1,5 +1,8 @@
+# Annotations are only for type checkers (Row/CursorResult are variadic generics starting SQLAlchemy 2.1)
+from __future__ import annotations
+
 import os, re, logging, inspect
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Iterator, Sequence
 
 import sqlalchemy
 from sqlalchemy import create_engine, __version__ as sqlalchemy_version, text as text_wrapper, Connection, CursorResult, Row
@@ -14,7 +17,7 @@ class SQLDBConnector :
     tables : ClassVar[dict[str, str]]
     app_yaml : ClassVar[str]
     _conn : Connection|None
-    _proxy : CursorResult[Any]|None
+    _proxy : CursorResult[*tuple[Any, ...]]|None
     database: ClassVar[str]
 
     @classmethod
@@ -39,7 +42,13 @@ class SQLDBConnector :
 
     @classmethod
     def make_engine_project(cls, gae_project: str, remote_db: bool, local_dev: bool, echo: bool = False) :
+        strict_mode = False # enforce strict mode; not needed at this moment
         connect_args = {"charset": "utf8mb4", "local_infile" : True}
+        if strict_mode :
+            # sql_mode is set explicitly rather than relying on the server default (it's MySQL 8+ default value)
+            connect_args['sql_mode'] = "ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,"\
+                                    "ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION"
+            
         pool_config : dict[str, Any]
 
         if remote_db:
@@ -356,18 +365,18 @@ class SQLDBConnector :
             self.session.remove ()
             self.session = None
 
-    def fetchone(self) -> Row[Any] | None :
+    def fetchone(self) -> Row[*tuple[Any, ...]] | None :
         assert self._proxy
         res = self._proxy.fetchone()
         self._close_proxy ()
         return res
 
-    def getone(self) -> Row[Any] :
+    def getone(self) -> Row[*tuple[Any, ...]] :
         res = self.fetchone()
         assert res is not None
-        return res    
+        return res
 
-    def fetchall(self) :
+    def fetchall(self) -> Sequence[Row[*tuple[Any, ...]]] :
         assert self._proxy
         res = self._proxy.fetchall()
         self._close_proxy ()
@@ -377,7 +386,7 @@ class SQLDBConnector :
         assert self._proxy
         return self._proxy._metadata.keys
 
-    def __iter__(self) :
+    def __iter__(self) -> Iterator[Row[*tuple[Any, ...]]] :
         assert self._proxy
         return iter(self._proxy)
 
